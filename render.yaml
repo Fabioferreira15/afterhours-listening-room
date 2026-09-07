@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: afterhours-listening-room
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOW_EPHEMERAL
+        value: "true"
+      - key: SPOTIFY_CLIENT_ID
+        value: 30d7fd774142499ea4b6627718445255
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true

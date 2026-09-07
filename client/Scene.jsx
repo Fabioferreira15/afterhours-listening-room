@@ -1,0 +1,52 @@
+import React,{useEffect,useRef} from 'react';
+import * as T from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+export default function Scene({members,self,onMove,track,playback,position}){
+ const mount=useRef(),latest=useRef({members,self,onMove,track,playback,position});latest.current={members,self,onMove,track,playback,position};
+ useEffect(()=>{
+  const el=mount.current,scene=new T.Scene();scene.background=new T.Color('#161b24');scene.fog=new T.Fog('#161b24',22,55);
+  const camera=new T.PerspectiveCamera(42,1,.1,100);camera.position.set(12,11,15);
+  let renderer;try{renderer=new T.WebGLRenderer({antialias:true});}catch{el.textContent='Este browser não conseguiu iniciar o mundo 3D. Os controlos de música continuam disponíveis.';return;}
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;el.appendChild(renderer.domElement);
+  const orbit=new OrbitControls(camera,renderer.domElement);orbit.target.set(0,1,0);orbit.enableDamping=true;orbit.minDistance=9;orbit.maxDistance=26;orbit.maxPolarAngle=Math.PI/2.12;
+  scene.add(new T.HemisphereLight('#acc0e1','#392317',1.1));const sun=new T.DirectionalLight('#ffd3a0',2.8);sun.position.set(2,9,5);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-9,right:9,top:9,bottom:-9});scene.add(sun);
+  const mat=(color,roughness=.8)=>new T.MeshStandardMaterial({color,roughness});const wood=mat('#624434'),fabric=mat('#8c6350'),dark=mat('#252731'),cream=mat('#e4d0b3'),green=mat('#405b47');
+  function box(w,h,d,x,y,z,m){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;scene.add(o);return o;}
+  function cylinder(r1,r2,h,x,y,z,m){const o=new T.Mesh(new T.CylinderGeometry(r1,r2,h,32),m);o.position.set(x,y,z);o.castShadow=true;scene.add(o);return o;}
+  box(13,.25,11,0,-.2,0,wood);for(let x=-6.4;x<6.5;x+=.52)box(.018,.014,11,x,-.065,0,mat('#322a27'));
+  box(13,5,.2,0,2.35,-5.5,mat('#44463f'));box(.2,5,11,-6.5,2.35,0,mat('#393e3e'));
+  // Timber slats around the projection screen.
+  for(let x=-6;x<6.2;x+=.35)box(.08,4.7,.1,x,2.35,-5.32,wood);
+  box(7.5,3.3,.18,0,2.7,-5.15,dark);
+  const projection=document.createElement('canvas');projection.width=1024;projection.height=440;const ctx=projection.getContext('2d'),texture=new T.CanvasTexture(projection);
+  const screen=new T.Mesh(new T.PlaneGeometry(7.15,3.05),new T.MeshBasicMaterial({map:texture}));screen.position.set(0,2.7,-5.04);scene.add(screen);
+  const coverMaterial=new T.MeshBasicMaterial({color:'#ffffff'}),coverPlane=new T.Mesh(new T.PlaneGeometry(1.6,1.6),coverMaterial);coverPlane.position.set(2.6,2.9,-5.01);coverPlane.visible=false;scene.add(coverPlane);let coverUrl='',coverRequest=0,disposed=false;
+  box(8,.05,5.4,0,-.025,.8,mat('#b0987c'));for(let i=0;i<8;i++)box(7.7,.012,.02,0,.012,-1.7+i*.68,mat('#897664'));
+  function sofa(x,z,rotation){const group=new T.Group();const parts=[];function part(w,h,d,px,py,pz,m){const o=box(w,h,d,px,py,pz,m);scene.remove(o);group.add(o);parts.push(o);}
+   part(3.7,.45,1.4,0,.4,0,fabric);part(3.7,.9,.28,0,.9,.6,fabric);part(.27,.7,1.4,-1.8,.65,0,fabric);part(.27,.7,1.4,1.8,.65,0,fabric);for(let j=-1;j<=1;j++)part(1.07,.2,1.04,j*1.1,.7,-.05,mat('#a27b63'));part(.65,.5,.2,-1.2,1,.35,cream);part(.65,.5,.2,1.2,1,.35,green);group.position.set(x,0,z);group.rotation.y=rotation;scene.add(group);}
+  sofa(0,3.5,0);sofa(-4.3,.7,Math.PI/2);sofa(4.3,.7,-Math.PI/2);
+  cylinder(1.15,1.1,.14,0,.65,.4,wood);cylinder(.65,.8,.6,0,.3,.4,dark);cylinder(.14,.12,.19,.45,.82,.5,cream);box(.48,.04,.35,-.3,.76,.4,mat('#a7b3b0'));
+  function lamp(x,z){cylinder(.35,.42,.07,x,.04,z,dark);cylinder(.025,.025,2.15,x,1.1,z,dark);const shade=new T.MeshStandardMaterial({color:'#f5cf86',emissive:'#ffad43',emissiveIntensity:.65,side:T.DoubleSide});cylinder(.3,.58,.6,x,2.25,z,shade);const light=new T.PointLight('#ffbd70',18,7,2);light.position.set(x,1.95,z);scene.add(light);}
+  lamp(-5,3.6);lamp(5,3.6);lamp(-4.8,-3.5);lamp(4.8,-3.5);
+  function speaker(x,z){box(.65,1.3,.6,x,.65,z,dark);for(const y of [.45,.95]){const o=new T.Mesh(new T.CylinderGeometry(.19,.19,.04,32),mat('#12151c'));o.rotation.x=Math.PI/2;o.position.set(x,y,z+.32);scene.add(o);}box(.07,.03,.01,x,.14,z+.33,mat('#dfad61'));}
+  speaker(-4.6,-4.6);speaker(4.6,-4.6);speaker(-5.5,2.5);speaker(5.5,2.5);
+  box(.8,.3,.65,0,3.8,2.5,cream);const lens=new T.Mesh(new T.CylinderGeometry(.1,.1,.07,24),new T.MeshBasicMaterial({color:'#fff2d3'}));lens.rotation.x=Math.PI/2;lens.position.set(0,3.8,2.13);scene.add(lens);
+  const beam=new T.Mesh(new T.ConeGeometry(2.3,7.4,4,1,true),new T.MeshBasicMaterial({color:'#ffe8b4',transparent:true,opacity:.025,depthWrite:false,side:T.DoubleSide}));beam.position.set(0,3.1,-1.6);beam.rotation.x=Math.PI/2;scene.add(beam);
+  // Plants and record shelf make the room feel inhabited, without dummy avatars.
+  for(const [x,z]of [[-5.5,-2],[5.5,-2]]){cylinder(.3,.22,.5,x,.25,z,cream);for(let i=0;i<7;i++){const leaf=new T.Mesh(new T.SphereGeometry(.35,12,8),green);leaf.scale.set(.5,2,.4);leaf.position.set(x+Math.sin(i)*.25,.8+(i%3)*.15,z+Math.cos(i)*.25);leaf.rotation.z=Math.sin(i)*.5;scene.add(leaf);}}
+  box(.7,2,2.3,-6,1,-.8,wood);for(let i=0;i<18;i++)box(.36,.65,.055,-5.58,.5,-1.8+i*.11,mat(['#b97e5e','#586d73','#c4b48b'][i%3]));
+  const avatars=new Map(),keys=new Set();let target=null,frame,lastSend=0,lastDraw=0,lastTime=performance.now(),local={x:0,z:3};
+  function makeAvatar(m){const g=new T.Group(),body=new T.Mesh(new T.CapsuleGeometry(.22,.4,5,10),mat(m.color));body.position.y=.7;g.add(body);const head=new T.Mesh(new T.SphereGeometry(.19,18,12),mat('#e2b58c'));head.position.y=1.23;g.add(head);for(const x of [-.12,.12]){const leg=new T.Mesh(new T.CapsuleGeometry(.085,.3,4,8),dark);leg.position.set(x,.24,0);g.add(leg);}const c=document.createElement('canvas');c.width=256;c.height=64;const cc=c.getContext('2d');cc.fillStyle='#171c26cc';cc.fillRect(0,0,256,64);cc.fillStyle='#fff0d5';cc.font='26px sans-serif';cc.textAlign='center';cc.fillText(m.name,128,41);const label=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false}));label.scale.set(1.5,.37,1);label.position.y=1.8;g.add(label);g.position.set(m.x,0,m.z);scene.add(g);return g;}
+  const down=e=>{if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||e.target.isContentEditable)return;keys.add(e.key.toLowerCase());if(e.key.startsWith('Arrow'))e.preventDefault();};const up=e=>keys.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);const blur=()=>keys.clear();window.addEventListener('blur',blur);
+  let start;const pointerDown=e=>start={x:e.clientX,y:e.clientY};const pointerUp=e=>{if(!start||Math.hypot(e.clientX-start.x,e.clientY-start.y)>6)return;const rect=el.getBoundingClientRect(),ray=new T.Raycaster();ray.setFromCamera(new T.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1),camera);const point=new T.Vector3();if(ray.ray.intersectPlane(new T.Plane(new T.Vector3(0,1,0),0),point))target={x:Math.max(-5,Math.min(5,point.x)),z:Math.max(-3,Math.min(4,point.z))};};renderer.domElement.addEventListener('pointerdown',pointerDown);renderer.domElement.addEventListener('pointerup',pointerUp);
+  const resize=new ResizeObserver(()=>{const w=el.clientWidth,h=el.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);});resize.observe(el);
+  function animate(now){frame=requestAnimationFrame(animate);const dt=Math.min((now-lastTime)/1000,.05);lastTime=now;const state=latest.current;
+   for(const m of state.members||[]){if(!avatars.has(m.id))avatars.set(m.id,makeAvatar(m));const g=avatars.get(m.id);if(m.id===state.self){let dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0),dz=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);if(dx||dz)target=null;else if(target){dx=target.x-local.x;dz=target.z-local.z;if(Math.hypot(dx,dz)<.07){target=null;dx=dz=0;}}const len=Math.hypot(dx,dz);if(len){local.x=Math.max(-5,Math.min(5,local.x+dx/len*dt*2.2));local.z=Math.max(-3,Math.min(4,local.z+dz/len*dt*2.2));g.rotation.y=Math.atan2(dx,dz);if(now-lastSend>80){state.onMove(local);lastSend=now;}}g.position.set(local.x,0,local.z);}else g.position.lerp(new T.Vector3(m.x,0,m.z),Math.min(1,dt*12));}
+   for(const [id,g]of avatars)if(!state.members?.some(m=>m.id===id)){scene.remove(g);g.traverse(o=>{o.geometry?.dispose();if(o.material?.map)o.material.map.dispose();o.material?.dispose();});avatars.delete(id);}
+   if(now-lastDraw>200){lastDraw=now;const wanted=state.track?.cover||'';if(wanted!==coverUrl){coverUrl=wanted;coverPlane.visible=false;const request=++coverRequest;coverMaterial.map?.dispose();coverMaterial.map=null;if(wanted)new T.TextureLoader().load(wanted,t=>{if(disposed||request!==coverRequest){t.dispose();return;}t.colorSpace=T.SRGBColorSpace;coverMaterial.map=t;coverMaterial.needsUpdate=true;coverPlane.visible=true;},undefined,()=>{});}ctx.fillStyle='#1b252d';ctx.fillRect(0,0,1024,440);ctx.fillStyle='#c4a576';ctx.font='24px sans-serif';ctx.fillText('A F T E R H O U R S   /   LISTENING ROOM',55,65);ctx.fillStyle='#f5e7cc';ctx.font='46px Georgia';ctx.fillText((state.track?.title||'A noite é nossa.').slice(0,24),55,165);ctx.font='28px sans-serif';ctx.fillStyle='#b5c1bc';ctx.fillText((state.track?.artist||'Escolhe o primeiro som para a sala.').slice(0,35),55,219);ctx.fillStyle='#38454c';ctx.fillRect(55,290,914,5);ctx.fillStyle='#e9ba74';ctx.fillRect(55,290,914*Math.min(1,(state.position||0)/(state.track?.duration||1)),5);ctx.font='22px sans-serif';ctx.fillText(state.playback?.playing?'A TOCAR':'EM PAUSA',55,353);ctx.fillText(`${state.members?.length||0} pessoas na sala`,690,353);texture.needsUpdate=true;}
+   orbit.update();renderer.render(scene,camera);
+  }frame=requestAnimationFrame(animate);
+  return()=>{disposed=true;cancelAnimationFrame(frame);resize.disconnect();window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur);orbit.dispose();scene.traverse(o=>{o.geometry?.dispose();o.material?.map?.dispose();o.material?.dispose();});texture.dispose();renderer.dispose();el.replaceChildren();};
+ },[]);
+ return <div className="scene" ref={mount}/>;
+}
